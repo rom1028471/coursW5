@@ -1,0 +1,117 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_REGISTRY = 'your-registry'
+        DOCKER_CREDENTIALS = 'docker-credentials-id'
+        SONAR_CREDENTIALS = 'sonar-credentials-id'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Backend Build') {
+            steps {
+                dir('subscription-system') {
+                    sh 'mvn clean package -DskipTests'
+                }
+            }
+        }
+
+        stage('Frontend Build') {
+            steps {
+                dir('subscription-system/frontend') {
+                    sh 'npm install'
+                    sh 'npm run build'
+                }
+            }
+        }
+
+        stage('Run Tests') {
+            parallel {
+                stage('Backend Tests') {
+                    steps {
+                        dir('subscription-system') {
+                            sh 'mvn test'
+                        }
+                    }
+                    post {
+                        always {
+                            junit '**/target/surefire-reports/*.xml'
+                        }
+                    }
+                }
+                stage('Frontend Tests') {
+                    steps {
+                        dir('subscription-system/frontend') {
+                            sh 'npm test -- --watchAll=false'
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Static Code Analysis') {
+            steps {
+                withSonarQubeEnv(credentialsId: env.SONAR_CREDENTIALS) {
+                    sh '''
+                        mvn sonar:sonar \
+                        -Dsonar.projectKey=subscription-system \
+                        -Dsonar.sources=. \
+                        -Dsonar.host.url=http://your-sonarqube-url \
+                        -Dsonar.login=$SONAR_TOKEN
+                    '''
+                }
+            }
+        }
+
+        stage('Build Docker Images') {
+            steps {
+                script {
+                    docker.build("${env.DOCKER_REGISTRY}/subscription-backend:${env.BUILD_NUMBER}", "./subscription-system")
+                    docker.build("${env.DOCKER_REGISTRY}/subscription-frontend:${env.BUILD_NUMBER}", "./subscription-system/frontend")
+                }
+            }
+        }
+
+        stage('Push Docker Images') {
+            steps {
+                script {
+                    docker.withRegistry('https://' + env.DOCKER_REGISTRY, env.DOCKER_CREDENTIALS) {
+                        docker.image("${env.DOCKER_REGISTRY}/subscription-backend:${env.BUILD_NUMBER}").push()
+                        docker.image("${env.DOCKER_REGISTRY}/subscription-frontend:${env.BUILD_NUMBER}").push()
+                    }
+                }
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                script {
+                    // Замените на ваш метод развертывания (например, kubectl, docker-compose и т.д.)
+                    sh '''
+                        docker-compose -f docker-compose.yml down
+                        docker-compose -f docker-compose.yml up -d
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
+        }
+        success {
+            echo 'Pipeline completed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed!'
+            // Добавьте здесь уведомления (например, в Slack или по email)
+        }
+    }
+}
