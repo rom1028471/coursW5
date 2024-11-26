@@ -6,6 +6,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import javax.persistence.EntityNotFoundException;
+import javax.validation.ConstraintViolationException;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -28,8 +29,8 @@ public class GlobalExceptionHandler {
         Map<String, String> errors = new HashMap<>();
         if (ex instanceof MethodArgumentNotValidException) {
             ((MethodArgumentNotValidException) ex).getBindingResult().getFieldErrors().forEach(error -> 
-                errors.put(error.getField(), error.getDefaultMessage())
-            );
+            errors.put(error.getField(), error.getDefaultMessage())
+        );
         } else if (ex instanceof ConstraintViolationException) {
             ((ConstraintViolationException) ex).getConstraintViolations().forEach(violation ->
                 errors.put(violation.getPropertyPath().toString(), violation.getMessage())

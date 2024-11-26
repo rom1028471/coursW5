@@ -40,9 +40,11 @@ public class User {
     private UserRole role;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    @Builder.Default
     private Set<Subscription> subscriptions = new HashSet<>();
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    @Builder.Default
     private Set<Order> orders = new HashSet<>();
 
     @ManyToMany
@@ -51,5 +53,6 @@ public class User {
         joinColumns = @JoinColumn(name = "user_id"),
         inverseJoinColumns = @JoinColumn(name = "publication_id")
     )
+    @Builder.Default
     private Set<Publication> favorites = new HashSet<>();
 }

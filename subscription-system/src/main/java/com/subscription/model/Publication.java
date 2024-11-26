@@ -37,6 +37,7 @@ public class Publication {
     @ElementCollection
     @CollectionTable(name = "publication_tags", joinColumns = @JoinColumn(name = "publication_id"))
     @Column(name = "tag")
+    @Builder.Default
     private Set<String> tags = new HashSet<>();
 
     @Column(nullable = false)
@@ -55,11 +56,14 @@ public class Publication {
     private String publisher;
 
     @OneToMany(mappedBy = "publication")
+    @Builder.Default
     private Set<Subscription> subscriptions = new HashSet<>();
 
     @ManyToMany(mappedBy = "favorites")
+    @Builder.Default
     private Set<User> favoritedBy = new HashSet<>();
 
     @Column(nullable = false)
+    @Builder.Default
     private boolean active = true;
 }

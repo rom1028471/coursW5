@@ -42,6 +42,7 @@ public class Subscription {
     private com.subscription.model.SubscriptionStatus status;
 
     @Column(nullable = false)
+    @Builder.Default
     private boolean autoRenewal = false;
 
     @Column(name = "last_delivery_date")
